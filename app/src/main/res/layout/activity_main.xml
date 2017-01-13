@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.droidloft.squeeze.MainActivity">
+
+    <LinearLayout
+        android:id="@+id/entry_layout"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true">
+
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:inputType="number"
+            android:hint="120"
+            android:gravity="center"
+            android:background="@android:color/transparent"
+            android:ems="10"
+            android:id="@+id/sysEditText"
+            android:layout_weight="2" />
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/black"/>
+
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:inputType="number"
+            android:gravity="center"
+            android:background="@android:color/transparent"
+            android:hint="70"
+            android:ems="10"
+            android:id="@+id/diaEditText"
+            android:layout_weight="2" />
+
+        <View
+            android:layout_width="2dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/black"/>
+
+        <Button
+            android:text="Save"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:background="@color/colorPrimaryDark"
+            android:textColor="@android:color/white"
+            android:id="@+id/saveButton"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/separator_view"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@android:color/black"
+        android:layout_below="@+id/entry_layout"/>
+
+    <GridView
+        android:id="@+id/gridview"
+        android:numColumns="3"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/separator_view"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>
