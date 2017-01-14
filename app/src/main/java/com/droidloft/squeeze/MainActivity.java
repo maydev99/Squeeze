@@ -1,6 +1,8 @@
 package com.droidloft.squeeze;
 
 import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,28 +12,32 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String version = "0.1", buildDate = "1-13-2017";
+    private String version = "1.0", buildDate = "1-14-2017";
     private EditText sysET, diaET;
     private Button saveB;
-    private GridView gridView;
-    private SQLiteDatabase sqlDB;
+    private ListView listView;
     private ArrayList<String> myArrayList;
     private ArrayAdapter<String>myAdapter;
-    private Cursor cursor;
     private String strDate, strDia, strSys;
+    private Set<String> set;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,8 +46,43 @@ public class MainActivity extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         idViews();
-        openDB();
-        getTheSQLData();
+        loadSettings();
+
+        if(set != null){
+            myArrayList = new ArrayList<>(set);
+        } else {
+            myArrayList = new ArrayList<>();
+        }
+
+        displayList();
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                final int position = i;
+                AlertDialog.Builder deleteAlert = new AlertDialog.Builder(MainActivity.this);
+                deleteAlert.setTitle("Delete Entry from List");
+                deleteAlert.setMessage("Are you sure?");
+                deleteAlert.setIcon(R.mipmap.ic_launcher);
+                deleteAlert.setCancelable(true);
+                deleteAlert.setPositiveButton("delete", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        myArrayList.remove(position);
+                        displayList();
+                    }
+                });
+                deleteAlert.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        //Closes Dialog
+                    }
+                });
+                deleteAlert.show();
+                return false;
+            }
+        });
+
 
 
         saveB.setOnClickListener(new View.OnClickListener() {
@@ -52,7 +93,15 @@ public class MainActivity extends AppCompatActivity {
                 if(strDia.equals("") || strSys.equals("")){
                     Toast.makeText(MainActivity.this, "Data missing", Toast.LENGTH_SHORT).show();
                 } else {
-                    putDataIntoDB();
+                    getDate();
+                    getEnteredValues();
+                    String newEntry = strDate + "      " + strSys + "/" + strDia;
+                    myArrayList.add(newEntry);
+                    saveSettings();
+                    displayList();
+                    sysET.setText("");
+                    sysET.requestFocus();
+                    diaET.setText("");
                 }
 
 
@@ -63,12 +112,27 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void putDataIntoDB() {
-        sqlDB.execSQL("INSERT INTO mytable(date, sys, dia) VALUES('" + strDate + "','" + strSys + "','" + strDia + "');");
-        Toast.makeText(MainActivity.this, "Blood Pressure Saved", Toast.LENGTH_SHORT).show();
-        getTheSQLData();
+    private void displayList() {
+        Collections.sort(myArrayList, Collections.<String>reverseOrder());
+        myAdapter = new ArrayAdapter<String>(MainActivity.this, R.layout.list_item, R.id.list_item_item, myArrayList);
+        listView.setAdapter(myAdapter);
 
+    }
 
+    private void loadSettings() {
+        SharedPreferences listPrefs = getSharedPreferences("saved_list_key", MODE_PRIVATE);
+        set = listPrefs.getStringSet("saved_list_key", null);
+
+    }
+
+    private void saveSettings(){
+        set = new HashSet<>();
+        set.addAll(myArrayList);
+
+        SharedPreferences listPrefs = getSharedPreferences("saved_list_key", MODE_PRIVATE);
+        SharedPreferences.Editor listEditor = listPrefs.edit();
+        listEditor.putStringSet("saved_list_key", set);
+        listEditor.apply();
     }
 
     private void getEnteredValues() {
@@ -79,59 +143,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void getDate() {
         Calendar cal = Calendar.getInstance();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/DD | hh:mma");
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/DD   hh:mma");
         strDate = sdf.format(cal.getTime());
         //Toast.makeText(MainActivity.this, "" + strDate, Toast.LENGTH_SHORT).show();
 
     }
 
-    private void getTheSQLData() {
-        myArrayList = new ArrayList<>();
-        cursor = sqlDB.rawQuery("SELECT * FROM mytable ORDER BY date", null);
-        int idColumn = cursor.getColumnIndex("id");
-        int dateColumn = cursor.getColumnIndex("date");
-        int sysColumn = cursor.getColumnIndex("sys");
-        int diaColumn = cursor.getColumnIndex("dia");
-        cursor.moveToFirst();
-
-        if(cursor != null && cursor.getCount() > 0) {
-            do{
-                String id = cursor.getString(idColumn);
-                String date = cursor.getString(dateColumn);
-                String sys = cursor.getString(sysColumn);
-                String dia = cursor.getString(diaColumn);
-
-                myArrayList.add(date);
-                myArrayList.add(sys);
-                myArrayList.add(dia);
-            } while (cursor.moveToNext());
-
-            myAdapter = new ArrayAdapter<String>(this, R.layout.list_item, R.id.list_item_item, myArrayList);
-
-            gridView.setAdapter(myAdapter);
-
-        }
 
 
-    }
-
-    private void openDB() {
-        try{
-            sqlDB = this.openOrCreateDatabase("SqlDB", MODE_PRIVATE, null);
-            sqlDB.execSQL("CREATE TABLE IF NOT EXISTS mytable " + "(id integer primary key, date text, sys text, dia text);");
-            File database = getApplicationContext().getDatabasePath("MyDB.db");
-
-        } catch (Exception e){
-            Log.e("DATABASE ERROR", "Error Creating Database");
-        }
-
-    }
 
     private void idViews() {
         sysET = (EditText)findViewById(R.id.sysEditText);
         diaET = (EditText)findViewById(R.id.diaEditText);
         saveB = (Button)findViewById(R.id.saveButton);
-        gridView = (GridView)findViewById(R.id.gridview);
+        listView = (ListView)findViewById(R.id.listview);
 
     }
 
